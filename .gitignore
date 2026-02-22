@@ -1,0 +1,15 @@
+# Environment variables
+.env
+
+# Virtual environment
+venv/
+.venv/
+
+# Python cache
+__pycache__/
+
+# PyCharm
+.idea/
+
+# Local data
+data/raw_activities.csv
