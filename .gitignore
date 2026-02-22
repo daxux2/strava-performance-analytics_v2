@@ -12,4 +12,4 @@ __pycache__/
 .idea/
 
 # Local data
-data/raw_activities.csv
+data/raw_activities.json
