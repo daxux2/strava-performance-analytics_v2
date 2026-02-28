@@ -4,36 +4,48 @@ import os
 from config import ACCESS_TOKEN
 
 
-def get_activities(per_page=10):
+def get_all_activities():
     url = "https://www.strava.com/api/v3/athlete/activities"
+    headers = {"Authorization": f"Bearer {ACCESS_TOKEN}"}
 
-    headers = {
-        "Authorization": f"Bearer {ACCESS_TOKEN}"
-    }
+    all_activities = []
+    page = 1
 
-    params = {
-        "per_page": per_page
-    }
+    while True:
+        params = {
+            "per_page": 200,
+            "page": page
+        }
 
-    response = requests.get(url, headers=headers, params=params)
+        response = requests.get(url, headers=headers, params=params)
 
-    if response.status_code != 200:
-        print("Status code:", response.status_code)
-        print(response.text)
-        raise Exception("API request failed")
+        if response.status_code != 200:
+            print("STATUS:", response.status_code)
+            print("RESPONSE:", response.text)
+            raise Exception("API request failed")
 
-    return response.json()
+        activities = response.json()
+
+        if not activities:
+            break
+
+        print(f"Downloaded page {page} ({len(activities)} activities)")
+        all_activities.extend(activities)
+
+        page += 1
+
+    return all_activities
 
 
 def main():
-    activities = get_activities(10)
+    activities = get_all_activities()
 
-    # tworzy folder data jeśli nie istnieje
     os.makedirs("data", exist_ok=True)
 
-    # zapis surowych danych
     with open("data/raw_activities.json", "w", encoding="utf-8") as f:
         json.dump(activities, f, indent=4)
+
+    print(f"Total downloaded: {len(activities)} activities")
 
     print(f"Downloaded {len(activities)} activities")
     print("Saved to data/raw_activities.json")
