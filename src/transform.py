@@ -8,6 +8,7 @@ df = pd.read_json("data/raw_activities.json")
 print(df.head())
 print(df.shape)
 print(df.columns)
+print(df.dtypes)
 
 
 print(df["map"].iloc[0])
