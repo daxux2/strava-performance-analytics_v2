@@ -88,7 +88,7 @@ df = df.filter(items= [
     'efficiency',
     'average_heartrate',
     'max_heartrate',
-    'summary_polyline',
+    ##'summary_polyline',
     'ride_duration_category'
 
 ])
@@ -96,4 +96,4 @@ df = df.filter(items= [
 
 print(df)
 
-df.to_csv("data/fact_rides.csv", index=False, sep = ";")
+df.to_csv("data/fact_rides.csv", index=False, sep = ",")
