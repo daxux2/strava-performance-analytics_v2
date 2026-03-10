@@ -96,4 +96,4 @@ df = df.filter(items= [
 
 print(df)
 
-df.to_csv("data/fact_rides.csv", index=False, sep =",")
+df.to_csv("data/fact_rides.csv", index=False, sep = ",")
