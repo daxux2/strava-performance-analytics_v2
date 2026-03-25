@@ -1,23 +1,16 @@
 import pandas as pd
 import datetime
+import polyline
 
 
 
+# LOAD DATA
+# =========================
 df = pd.read_json("data/raw_activities.json")
 
-print(df.head())
-print(df.shape)
-print(df.columns)
-print(df.dtypes)
 
-
-print(df["map"].iloc[0])
-
-print(df)
-
-
-##Data Transformation and adding some columns
-
+# BASIC TRANSFORMATIONS
+# =========================
 df["distance_km"] = df["distance"] / 1000
 df["moving_time_min"] = df["moving_time"] / 60
 df["moving_time_h"] = df["moving_time"] / 3600
@@ -30,13 +23,15 @@ df["month"] = df["start_date"].dt.month
 df["week"] = df["start_date"].dt.isocalendar().week
 df["weekday"] = df["start_date"].dt.day_name()
 df["start_hour"] = df["start_date"].dt.hour
-df["moving_time_str"] = df["moving_time"].apply(lambda x: str(datetime.timedelta(seconds=int(x))) )
 
+df["moving_time_str"] = df["moving_time"].apply(
+    lambda x: str(datetime.timedelta(seconds=int(x)))
+)
 
 df["ride_duration_category"] = pd.cut(
     df["moving_time_min"],
     bins=[0, 60, 120, 180, 1000],
-    labels=["short", "medium", "long", 'epic']
+    labels=["short", "medium", "long", "epic"]
 )
 
 df["ride_environment"] = df["sport_type"].map({
@@ -44,35 +39,64 @@ df["ride_environment"] = df["sport_type"].map({
     "VirtualRide": "indoor"
 })
 
-
 df["name"] = "Outdoor Ride"
 
-##Heatmap
+
+# POLYLINE (GEO)
+# =========================
 df["summary_polyline"] = df["map"].apply(
     lambda x: x.get("summary_polyline") if isinstance(x, dict) else None
 )
 
-###Efficiency parameters
+
+# METRICS
+# =========================
 df["elevation_per_km"] = df["elevation_m"] / df["distance_km"]
 df["efficiency"] = df["avg_speed_kmh"] / df["average_heartrate"]
 
-##Filtrowanie rajdów outdoor z krótkim distance_km oraz nullowyn average_heartrate/average_watts
-##df = df[(df["type"] == "Ride") & (df["trainer"] == False)]
+
+# FILTERING
+# =========================
 df = df[df["distance_km"] > 20]
-df.dropna(subset=["average_heartrate"], inplace=True)
-
-pd.set_option("display.max_columns", None)
-pd.set_option("display.width", None)
-
-print(df["map"].iloc[0])
-
-print(df)
+df = df.dropna(subset=["average_heartrate"])
 
 
-##Selecting column
-print(df["start_date"].dtypes)
-##df = df.set_index("start_date")
-df = df.filter(items= [
+# BUILD GEO TABLE (NOWE)
+# =========================
+def build_ride_points(df):
+    points = []
+
+    for _, row in df.iterrows():
+        poly = row["summary_polyline"]
+
+        if pd.notnull(poly):
+            try:
+                coords = polyline.decode(poly)
+
+                # 🔥 kluczowe dla wydajności
+                coords = coords[::5]
+
+                for i, (lat, lon) in enumerate(coords):
+                    points.append({
+                        "ride_id": row["id"],
+                        "point_order": i,
+                        "lat": lat,
+                        "lon": lon,
+                        "year": row["year"],
+                        "month": row["month"]
+                    })
+
+            except Exception as e:
+                print(f"Polyline error for ride {row['id']}: {e}")
+
+    return pd.DataFrame(points)
+
+df_points = build_ride_points(df)
+
+
+# SELECT FINAL COLUMNS
+# =========================
+df_rides = df.filter(items=[
     'id',
     "ride_environment",
     'start_date',
@@ -89,12 +113,20 @@ df = df.filter(items= [
     'efficiency',
     'average_heartrate',
     'max_heartrate',
-    ##'summary_polyline',
-    'ride_duration_category'
-
+    'ride_duration_category',
+    'average_watts'
 ])
 
 
-print(df)
+# =========================
+# SAVE
+# =========================
+df_rides.to_csv("data/fact_rides.csv", index=False)
+df_points.to_csv("data/ride_points.csv", index=False)
 
-df.to_csv("data/fact_rides.csv", index=False, sep = ",")
+
+print("✅ ETL completed")
+print(f"Rides: {df_rides.shape}")
+print(f"Points: {df_points.shape}")
+
+print(df_rides)
