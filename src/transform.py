@@ -114,7 +114,8 @@ df_rides = df.filter(items=[
     'average_heartrate',
     'max_heartrate',
     'ride_duration_category',
-    'average_watts'
+    'average_watts',
+    'max_watts'
 ])
 
 
